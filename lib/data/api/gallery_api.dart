@@ -1,22 +1,26 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import '../../domain/entities/media_item.dart';
 
 class GalleryApi {
   final Dio _dio;
-  static const String baseUrl = 'https://gallery.prod2.webant.ru';
   String? _accessToken;
 
-  String? get accessToken => _accessToken;
+  GalleryApi._(this._dio);
 
-  GalleryApi(this._dio);
+  static Future<GalleryApi> create(Dio dio) async {
+    final api = GalleryApi._(dio);
+    await api._authenticate();
+    return api;
+  }
 
   Future<void> _authenticate() async {
     if (_accessToken != null) return;
     try {
       final response = await _dio.post(
-        '$baseUrl/token',
+        'https://gallery.prod2.webant.ru/token',
         data: {
           "grant_type": "password",
           "username": dotenv.env['AUTH_USERNAME']!,
@@ -37,12 +41,10 @@ class GalleryApi {
     required int offset,
     required int limit,
   }) async {
-    await _authenticate();
-
     try {
       final page = (offset / limit).floor() + 1;
       final response = await _dio.get(
-        '$baseUrl/photos',
+        'https://gallery.prod2.webant.ru/photos',
         queryParameters: {
           'new': sort == 'new',
           'popular': sort == 'popular',
@@ -59,15 +61,21 @@ class GalleryApi {
   }
 
   Future<MediaItem> getPhotoDetails(int id) async {
-    await _authenticate();
     try {
       final response = await _dio.get(
-        '$baseUrl/photos/$id',
+        'https://gallery.prod2.webant.ru/photos/$id',
         options: Options(headers: {'Authorization': 'Bearer $_accessToken'}),
       );
       return MediaItem.fromJson(response.data);
     } catch (e) {
       throw Exception('Ошибка загрузки деталей фото: $e');
     }
+  }
+
+  ImageProvider getNetworkImage(String url) {
+    return NetworkImage(
+      url,
+      headers: {'Authorization': 'Bearer $_accessToken'},
+    );
   }
 }

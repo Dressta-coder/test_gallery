@@ -21,10 +21,9 @@ class GalleryBloc {
     required String sort,
     required this.onStateChanged,
   }) : _repository = repository,
-       _sort = sort,
-       _state = GalleryState();
+        _sort = sort,
+        _state = GalleryState();
 
-  // Первая загрузка / Pull-to-refresh
   Future<void> loadFirstPage() async {
     if (_isLoading) return;
     _isLoading = true;
@@ -34,7 +33,6 @@ class GalleryBloc {
     );
     try {
       final items = await _repository.getImages(_sort, _currentOffset, _limit);
-      final token = _repository.accessToken;
       _currentOffset = items.length;
       final hasReachedEnd = items.length < _limit;
       _updateState(
@@ -42,7 +40,6 @@ class GalleryBloc {
           status: GalleryStatus.loaded,
           items: items,
           hasReachedEnd: hasReachedEnd,
-          authToken: token,
         ),
       );
     } catch (e) {
@@ -64,7 +61,6 @@ class GalleryBloc {
         _currentOffset,
         _limit,
       );
-      final token = _repository.accessToken;
       _currentOffset += newItems.length;
       final hasReachedEnd = newItems.length < _limit;
       final allItems = List<MediaItem>.from(state.items)..addAll(newItems);
@@ -73,7 +69,6 @@ class GalleryBloc {
           status: GalleryStatus.loaded,
           items: allItems,
           hasReachedEnd: hasReachedEnd,
-          authToken: token,
         ),
       );
     } catch (e) {
@@ -88,5 +83,8 @@ class GalleryBloc {
   void _updateState(GalleryState newState) {
     _state = newState;
     onStateChanged();
+  }
+
+  void dispose() {
   }
 }

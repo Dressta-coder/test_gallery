@@ -1,7 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../../domain/entities/media_item_details_args.dart';
+import 'package:untitled/domain/repositories/gallery_repository.dart';
 
 import '../bloc/details/details_bloc.dart';
 import '../bloc/details/details_state.dart';
@@ -17,33 +17,26 @@ class DetailsPage extends StatefulWidget {
 
 class _DetailsPageState extends State<DetailsPage> {
   DetailsBloc? _bloc;
-  MediaItemDetailsArgs? _args;
-  final _transformationController = TransformationController();
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_args == null) {
-      final args = ModalRoute.of(context)?.settings.arguments;
-      if (args != null && args is MediaItemDetailsArgs) {
-        _args = args;
-        _bloc = DetailsBloc(
-          repository: args.repository,
-          photoId: _args!.item.id,
-          onStateChanged: () {
-            if (mounted) setState(() {});
-          },
-        );
-        _bloc!.loadDetails();
-      }
+    if (_bloc == null) {
+      final photoId = ModalRoute.of(context)!.settings.arguments as int;
+      _bloc = DetailsBloc(
+        repository: context.read<GalleryRepository>(),
+        photoId: photoId,
+        onStateChanged: () {
+          if (mounted) setState(() {});
+        },
+      );
+      _bloc!.loadDetails();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_args == null ||
-        _bloc == null ||
-        _bloc!.state.status == DetailsStatus.loading) {
+    if (_bloc == null || _bloc!.state.status == DetailsStatus.loading) {
       return Scaffold(
         backgroundColor: AppColors.background,
         body: Center(
@@ -53,7 +46,6 @@ class _DetailsPageState extends State<DetailsPage> {
     }
 
     final state = _bloc!.state;
-    final authToken = _args!.authToken;
 
     if (state.status == DetailsStatus.error) {
       return Scaffold(
@@ -63,13 +55,13 @@ class _DetailsPageState extends State<DetailsPage> {
     }
 
     final item = state.item!;
-    final headers = authToken != null
-        ? {'Authorization': 'Bearer $authToken'}
-        : null;
-
     final formattedDate = item.dateCreated != null
         ? DateFormat('dd.MM.yyyy').format(item.dateCreated!)
         : '';
+
+    final imageProvider = context.read<GalleryRepository>().getImageProvider(
+      item.imageUrl,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -82,46 +74,29 @@ class _DetailsPageState extends State<DetailsPage> {
                 horizontal: 16.0,
                 vertical: 8.0,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.arrow_back_ios,
-                          color: AppColors.detailsBlue,
-                          size: 18,
-                        ),
-                        SizedBox(width: 4),
-                        Text('Back', style: AppTextStyles.detailsButton),
-                      ],
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.arrow_back_ios,
+                      color: AppColors.detailsBlue,
+                      size: 18,
                     ),
-                  ),
-                ],
+                    SizedBox(width: 4),
+                    Text('Back', style: AppTextStyles.detailsButton),
+                  ],
+                ),
               ),
             ),
             SizedBox(
               height: 250,
               width: double.infinity,
               child: InteractiveViewer(
-                transformationController: _transformationController,
                 trackpadScrollCausesScale: true,
                 minScale: 1.0,
                 maxScale: 4.0,
-                child: CachedNetworkImage(
-                  imageUrl: item.imageUrl,
-                  httpHeaders: headers,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  errorWidget: (context, url, error) =>
-                      Icon(Icons.error, color: AppColors.error),
-                ),
+                child: Image(image: imageProvider, fit: BoxFit.cover),
               ),
             ),
             SizedBox(height: 16),
@@ -158,11 +133,5 @@ class _DetailsPageState extends State<DetailsPage> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _transformationController.dispose();
-    super.dispose();
   }
 }

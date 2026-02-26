@@ -5,6 +5,7 @@ import '../theme/app_text_styles.dart';
 
 class OfflineWidget extends StatelessWidget {
   final VoidCallback onRetry;
+
   const OfflineWidget({required this.onRetry});
 
   @override
@@ -17,10 +18,7 @@ class OfflineWidget extends StatelessWidget {
           SizedBox(height: 16),
           Text('Нет подключения к интернету', style: AppTextStyles.bodyLarge),
           SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: onRetry,
-            child: Text('Повторить'),
-          ),
+          ElevatedButton(onPressed: onRetry, child: Text('Повторить')),
         ],
       ),
     );
